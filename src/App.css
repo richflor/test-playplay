@@ -1,3 +1,25 @@
 .center {
   margin-left: 30vw;
 }
+
+.display {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  width: 100%;
+}
+
+.thumbnail {
+  height: 150px;
+  width: 250px;
+}
+
+.thumbnail_container {
+  position: relative;
+}
+
+.delete {
+  position: absolute;
+  right: 10%;
+  bottom: 10%;
+}

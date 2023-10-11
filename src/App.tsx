@@ -1,36 +1,70 @@
 import { useState } from 'react'
 import './App.css'
 import { noEmbedResponse } from './Model';
+import { VideoDisplay } from './VideoDisplay';
+
+interface VideoList {
+  [key:string]:noEmbedResponse
+}
 
 function App() {
+  const noEmbedUrl = "https://noembed.com/embed?url="
   const [videoLink, setVideoLink] = useState<string>("");
-  const [videoImg, setVideoImg] = useState<string>("");
-  const [display, setDisplay] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false)
-  const setState = (e:React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, callback:Function) => {
-    if (e.target.value !== "") callback(e.target.value);
+
+  const [videoList, setVideoList] = useState<VideoList>({});
+  const [errorMessage, setErrorMessage] = useState<string>("");
+
+  const addVideo = (video:noEmbedResponse) => {
+    if(videoList[video.title]) {
+      return false;
+    }
+    setVideoList(prev => ({
+      ...prev,
+      [video.title] : video
+    }))
+    return true;
+  }
+
+  const deleteVideo = (video:noEmbedResponse) => {
+    if(!videoList[video.title]) {
+      return false;
+    }
+    let copy = {...videoList};
+    delete copy[video.title];
+    setVideoList(_prev => ({
+      ...copy,
+    }))
+    return true;
   }
 
   const displayVideoThumbnail = async (link:string) => {
-    const response = await noEmbedApi(link);
-    if (checkValidity(response)) {
+    try {
+      const response = await noEmbedApi(link);
       setError(false);
       setVideoLink(response.url);
-      setVideoImg(response.thumbnail_url)
-      setDisplay(true);
-    } else {
-      setError(true);
-      setVideoLink("");
-      setVideoImg("");
-      setDisplay(false);
+      if(!addVideo(response)) {
+        displayError("Video already present in the list")
+      }
+    } catch (error) {
+      displayError("Link is not valid");
     }
   }
 
+  const displayError = (message:string) => {
+    setError(true);
+    setErrorMessage(message);
+    setVideoLink("");
+  }
+
   const noEmbedApi = async (link:string):Promise<noEmbedResponse> => {
-    return fetch("https://noembed.com/embed?url=" + link)
+    return fetch(noEmbedUrl + link)
     .then(response => response.json())
+    .then((res) => {
+      if(!checkValidity(res)) throw new Error ("Link is not valid")
+      return res;
+    })
     .catch((error) => {
-      setError(true);
       console.log(error);
     })
   }
@@ -41,15 +75,28 @@ function App() {
     return true;
   }
 
+  const checkUrl = (url:string):boolean  => {
+    if(url.includes("https://www.youtube.com/", 0)) {
+      displayVideoThumbnail(url);
+      return true;
+    }
+    displayError("Is not a youtube link");
+    return false;
+  }
+
   return (
     <>
       <div className='center'>
         <div>
-          <input type="text" onChange={(e) => setState(e, setVideoLink)}/>
-          <button type="submit" onClick={() => displayVideoThumbnail(videoLink)}>Submit</button>
+          <input type="text" onChange={(e) => {
+            setVideoLink(e.target.value);
+          }}/>
+          <button type="submit" onClick={() => checkUrl(videoLink)}>Submit</button>
         </div>
-        {error && <p>Link is not valid</p>}
-        {display && <a href={videoLink} target='_blank'><img src={videoImg} alt="video_thumbnail" /></a>}
+        {error && <p>{errorMessage}</p>}
+      </div>
+      <div className="display">
+          {Object.values(videoList).map(video => <VideoDisplay video={video} deleteVideo={deleteVideo}/>)}
       </div>
     </>
   )

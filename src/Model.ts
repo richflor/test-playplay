@@ -15,3 +15,7 @@ export interface noEmbedResponse {
     title: string,
     error?: string,
 }
+
+export interface Video extends noEmbedResponse {
+    id:number
+}
